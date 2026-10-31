@@ -17,21 +17,21 @@ fn main() {
         io::stdin().read_line(&mut opcao_menu).expect("Falha ao ler opção");
 
         match opcao_menu.trim() {
-            "1" => iniciar_download(false), // false = vídeo individual
-            "2" => iniciar_download(true),  // true = playlist completa
+            "1" => iniciar_download(false),
+            "2" => iniciar_download(true),
             "3" => atualizar_ytdlp(),
             "4" => {
                 println!("\nA encerrar o programa. Até logo!");
                 break;
             }
-            _ => println!("\n Opção inválida! Tente novamente."),
+            _ => println!("\nOpção inválida! Tente novamente."),
         }
     }
 }
 
 fn iniciar_download(e_playlist: bool) {
     let tipo_str = if e_playlist { "da playlist" } else { "do vídeo" };
-    print!("\nDigite ou cole a URL {}: ", tipo_str);
+    print!("\nDigite ou cole la URL {}: ", tipo_str);
     io::stdout().flush().unwrap();
 
     let mut url = String::new();
@@ -39,14 +39,14 @@ fn iniciar_download(e_playlist: bool) {
     let url = url.trim();
 
     if url.is_empty() {
-        println!(" A URL não pode estar vazia!");
+        println!("A URL não pode estar vazia!");
         return;
     }
 
     println!("\nEscolha o formato desejado:");
     println!("1. MP4  (Vídeo em alta qualidade)");
     println!("2. MKV  (Vídeo com suporte a múltiplas legendas/áudios)");
-    println!("3. MP3  (Apenas Áudio com Metadados e Capa)");
+    println!("3. MP3  (Apenas Áudio limpo, sem ID ou números)");
     print!("Escolha o formato (1-3): ");
     io::stdout().flush().unwrap();
 
@@ -55,22 +55,20 @@ fn iniciar_download(e_playlist: bool) {
 
     let mut cmd = Command::new("yt-dlp");
 
-    // Tenta pegar a pasta oficial de Downloads do sistema operacional
+    // Define o diretório de saída e força APENAS o título e a extensão (sem ID ou códigos extras)
     if let Some(pasta_downloads) = dirs::download_dir() {
         if let Some(caminho_str) = pasta_downloads.to_str() {
-            cmd.arg("--paths").arg(caminho_str);
+            let template = format!("{}/%(title)s.%(ext)s", caminho_str);
+            cmd.arg("-o").arg(template);
         }
     } else {
-        // Fallback caso não encontre: usa o diretório atual
-        cmd.arg("--paths").arg(".");
+        cmd.arg("-o").arg("%(title)s.%(ext)s");
     }
 
     // Configura se deve baixar a playlist inteira ou apenas o vídeo isolado
     if e_playlist {
         cmd.arg("--yes-playlist");
-        // Se quiser que os vídeos da playlist fiquem numa pasta própria, 
-        // deskomente a linha abaixo:
-        // cmd.arg("-o").arg("%(playlist)s/%(title)s.%(ext)s");
+        cmd.arg("--no-play-number");
     } else {
         cmd.arg("--no-playlist");
     }
@@ -80,20 +78,20 @@ fn iniciar_download(e_playlist: bool) {
 
     match formato_escolha.trim() {
         "2" => {
-            println!("\n Baixando no formato MKV...");
+            println!("\nBaixando no formato MKV...");
             cmd.arg("-f").arg("bv*+ba/b")
                .arg("--merge-output-format").arg("mkv");
         }
         "3" => {
-            println!("\n Extraindo áudio no formato MP3 com metadados e capa...");
+            println!("\nExtraindo áudio MP3...");
             cmd.arg("-x")
                .arg("--audio-format").arg("mp3")
                .arg("--audio-quality").arg("0")
-               .arg("--embed-metadata")
-               .arg("--embed-thumbnail");
+               .arg("--embed-thumbnail")
+               .arg("--parse-metadata").arg("nothing:%(meta_track)s");
         }
         _ => {
-            println!("\n Baixando no formato MP4...");
+            println!("\nBaixando no formato MP4...");
             cmd.arg("-f").arg("bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4] / bv*+ba/b")
                .arg("--merge-output-format").arg("mp4");
         }
@@ -103,17 +101,17 @@ fn iniciar_download(e_playlist: bool) {
 
     match cmd.status() {
         Ok(status) if status.success() => {
-            println!("\n Download concluído! Os arquivos foram salvos na sua pasta padrão de Downloads.");
+            println!("\nDownload concluído! O arquivo foi salvo na sua pasta Downloads.");
         }
         _ => {
-            println!("\n Ocorreu um erro durante o download.");
-            println!("Certifique-se de que o FFmpeg está instalado caso esteja convertendo para MP3/MKV.");
+            println!("\nOcorreu um erro durante o download.");
+            println!("Certifique-se de que o ffmpeg está instalado no seu Linux.");
         }
     }
 }
 
 fn atualizar_ytdlp() {
-    println!("\n A verificar atualizações do yt-dlp...");
+    println!("\nA verificar atualizações do yt-dlp...");
     let status = Command::new("yt-dlp").arg("-U").status();
 
     match status {
